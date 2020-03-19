@@ -17,6 +17,7 @@ limitations under the License.
 package buildcontext
 
 import (
+	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
 
@@ -32,6 +33,8 @@ type Git struct {
 
 // UnpackTarFromBuildContext will provide the directory where Git Repository is Cloned
 func (g *Git) UnpackTarFromBuildContext() (string, error) {
+	logrus.Infof("Git cloning")
+
 	directory := constants.BuildContextDir
 	parts := strings.Split(g.context, "#")
 	options := git.CloneOptions{
@@ -41,6 +44,36 @@ func (g *Git) UnpackTarFromBuildContext() (string, error) {
 	if len(parts) > 1 {
 		options.ReferenceName = plumbing.ReferenceName(parts[1])
 	}
-	_, err := git.PlainClone(directory, false, &options)
+	r, err := git.PlainClone(directory, false, &options)
+
+	if len(parts) > 2 {
+		logrus.Infof("Checking out commit: %s", parts[2])
+		// ... retrieving the commit being pointed by HEAD
+		_, err := r.Head()
+		if err != nil {
+			return directory, err
+		}
+
+		w, err := r.Worktree()
+		if err != nil {
+			return directory, err
+		}
+
+		// ... checking out to commit
+		err = w.Checkout(&git.CheckoutOptions{
+			Hash: plumbing.NewHash(parts[2]),
+		})
+		if err != nil {
+			return directory, err
+		}
+
+		// ... retrieving the commit being pointed by HEAD, it shows that the
+		// repository is pointing to the giving commit in detached mode
+		_, err = r.Head()
+		if err != nil {
+			return directory, err
+		}
+	}
+
 	return directory, err
 }

@@ -259,6 +259,7 @@ func resolveSourceContext() error {
 	if err != nil {
 		return err
 	}
+	logrus.Infof("Build context resolved")
 	logrus.Debugf("Build context located at %s", opts.SrcContext)
 	return nil
 }
